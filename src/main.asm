@@ -11,11 +11,11 @@
 
 * = $0810
 
-!src "src/constants.asm"
+!src "src/hardware.asm"
 !src "src/zeropage.asm"
 
 start:
-    jsr rdinit   ; Initialize SID voice 3 for random numbers
+    jsr init_random   ; Initialize SID voice 3 for random numbers
     jsr clear_screen
     jsr init_raster_irq
     jsr init_video
@@ -49,11 +49,12 @@ game_tick:
 
     rts
 
-!src "src/gamestate.asm"
-!src "src/input.asm"
+!src "src/timing.asm"
+!src "src/random.asm"
+!src "src/joystick.asm"
 !src "src/player.asm"
-!src "src/irq.asm"
-!src "src/screen.asm"
+!src "src/raster_irq.asm"
+!src "src/video.asm"
 !src "src/entity_types.asm"
 !src "src/entities.asm"
-!src "src/entity_ai.asm"
+!src "src/enemy_ai.asm"
