@@ -4,8 +4,8 @@ ent_active:  !fill MAX_ENT, 0     ; 0 = free slot
 ent_type:    !fill MAX_ENT, 0     ; index into type tables
 ent_x:       !fill MAX_ENT, 0     ; cell column 0..39
 ent_y:       !fill MAX_ENT, 0     ; cell row 0..24
-ent_xf:      !fill MAX_ENT, 0     ; sub-cell fraction (fixed point, unused yet)
-ent_yf:      !fill MAX_ENT, 0
+ent_moveacc: !fill MAX_ENT, 0     ; step accumulator: += ent_speed each frame, step one cell on carry
+ent_speed:   !fill MAX_ENT, 0     ; movement rate; cells/frame = n/256 (seeded from typ_speed)
 ent_px:      !fill MAX_ENT, 0     ; previous drawn cell, for erase
 ent_py:      !fill MAX_ENT, 0
 ent_dx:      !fill MAX_ENT, 0     ; heading, signed: $ff / $00 / $01
@@ -52,8 +52,7 @@ spawn_entity:
     sta ent_y,x
     sta ent_py,x
     lda #0
-    sta ent_xf,x
-    sta ent_yf,x
+    sta ent_moveacc,x
     sta ent_state,x
     sta ent_dy,x
     lda #1
@@ -64,6 +63,8 @@ spawn_entity:
     ldy sp_type
     lda typ_hp,y
     sta ent_hp,x
+    lda typ_speed,y
+    sta ent_speed,x
     jsr draw_entity
     rts
 
