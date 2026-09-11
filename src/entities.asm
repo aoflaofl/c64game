@@ -8,7 +8,7 @@ ent_moveacc: !fill MAX_ENT, 0     ; step accumulator: += ent_speed each frame, s
 ent_speed:   !fill MAX_ENT, 0     ; movement rate; cells/frame = n/256 (seeded from typ_speed)
 ent_dx:      !fill MAX_ENT, 0     ; heading, signed: $ff / $00 / $01
 ent_dy:      !fill MAX_ENT, 0
-ent_state:   !fill MAX_ENT, 0     ; per-AI state-machine state
+ent_state:   !fill MAX_ENT, 0     ; per-AI state-machine state - For future expansion
 ent_timer:   !fill MAX_ENT, 0     ; generic countdown (reaction delay, cooldown)
 ent_hp:      !fill MAX_ENT, 0
 

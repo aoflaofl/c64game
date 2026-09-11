@@ -7,6 +7,7 @@ init_raster_irq:
     sta RASTER
 
     ; Mask out the highest bit of the vertical scroll register
+    ; This sets the highest bit of the vertical scroll register to 0
     lda SCROLY
     and #%01111111
     sta SCROLY
@@ -40,9 +41,10 @@ raster_irq:
     lda #$01
     sta IRQ_STATUS
     inc frame_counter
-  ;  ldx #$01
-  ;  stx RASTER
 
-    ; Continue through the normal KERNAL IRQ path so keyboard scanning and
-    ; register restoration remain consistent with the system IRQ trampoline.
+    ; Frame timing only -- game logic and rendering run once per frame from
+    ; the main loop's game_tick (main.asm), not here, so they never race a
+    ; raster IRQ landing mid-update.
+
+    ; Register restoration is handled by the KERNEL_IRQ_CLEANUP routine
     jmp KERNEL_IRQ_CLEANUP

@@ -1,38 +1,34 @@
-joyfire:   !byte 0, 0
-joyhoriz:  !byte 0, 0
-joyvert:   !byte 0, 0
+joyfire:   !byte 0
+joyhoriz:  !byte 0
+joyvert:   !byte 0
 
 joy2se:
-    ldx #1
-joylp:
     lda #0
-    sta joyhoriz,X
-    sta joyvert,X
-    sta joyfire,X
+    sta joyhoriz
+    sta joyvert
+    sta joyfire
 
-    lda CIAPRA,X
-up:
+    lda CIAPRA
+.joy_up:
     lsr
-    bcs down
-    dec joyvert,X
-down:
+    bcs .joy_down
+    dec joyvert
+.joy_down:
     lsr
-    bcs left
-    inc joyvert,X
-left:
+    bcs .joy_left
+    inc joyvert
+.joy_left:
     lsr
-    bcs right
-    dec joyhoriz,X
-right:
+    bcs .joy_right
+    dec joyhoriz
+.joy_right:
     lsr
-    bcs fire
-    inc joyhoriz,X
-fire:
+    bcs .joy_fire
+    inc joyhoriz
+.joy_fire:
     lsr
-    bcs done
-    inc joyfire,x
+    bcs .joy_done
+    inc joyfire
 
-done:
-    dex
-    bpl joylp
+.joy_done:
     rts

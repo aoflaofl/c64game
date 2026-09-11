@@ -11,14 +11,6 @@ init_video:
     lda #%00010100
     sta VMCSB
 
-    ; Set the border color
-    ;lda #$00
-    ;sta BORDER ; border color = black
-
-    ; Set the background color
-    ;lda #$06
-    ;sta BACKGROUND ; background color = blue
-
     rts
 
 clear_screen:

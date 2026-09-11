@@ -1,6 +1,5 @@
 PLAYER_START_X = 20
 PLAYER_START_Y = 12
-; PLAYER_MOVE_DELAY = 2      ; move every other frame
 PLAYER_MOVE_DELAY = 3    ; move every third frame
 
 PLAYER_LIVES_START = 3

@@ -16,10 +16,6 @@ COLOR_RAM   = $d800
 CIAPRA      = $dc00
 CIA_ICR     = $dc0d
 
-LSTX        = 197
-NOKEY       = 64
-CHROUT      = $ffd2
-KERNAL_IRQ  = $ea31
 KERNEL_IRQ_CLEANUP = $ea7e
 
 FREHI3 = $d40f ; Voice 3 frequency control register (high byte)
