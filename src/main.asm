@@ -39,14 +39,18 @@ loop:
 
 game_tick:
 
-    lda #$00
-    sta BORDER ; border color = black
+    lda #COLOR_BLACK
+    sta BORDER ; border color = black - start game state update
 
     jsr joy2se
     jsr update_game
+
+    lda #COLOR_RED
+    sta BORDER ; border color = red - start frame update
+
     jsr render_frame
 
-    lda #$01
+    lda #COLOR_WHITE
     sta BORDER ; border color = white — frame work done
 
     rts
