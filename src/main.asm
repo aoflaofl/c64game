@@ -21,6 +21,7 @@ start:
     jsr init_video
     jsr init_player
     jsr init_entities
+    jsr init_projectiles
     jsr spawn_wave
 
 loop:
@@ -41,8 +42,12 @@ game_tick:
 
     jsr joy2se
     jsr update_player_timed
+    jsr player_fire
     jsr run_ai
+    jsr update_projectiles
+    jsr check_player_hit
     jsr render_entities
+    jsr render_projectiles
 
     lda #$01
     sta BORDER ; border color = white — frame work done
@@ -58,3 +63,5 @@ game_tick:
 !src "src/entity_types.asm"
 !src "src/entities.asm"
 !src "src/enemy_ai.asm"
+!src "src/projectiles.asm"
+!src "src/collision.asm"
