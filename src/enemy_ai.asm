@@ -1,5 +1,3 @@
-ai_vec: !byte 0,0
-
 run_ai:
     ldx #0
 .ai_entity_loop:
@@ -11,9 +9,9 @@ run_ai:
     lda typ_react,y
     sta ent_timer,x
     lda typ_ai_lo,y
-    sta ai_vec
+    sta AI_VEC
     lda typ_ai_hi,y
-    sta ai_vec+1
+    sta AI_VEC+1
     jsr call_ai               ; X = entity index, preserved by convention
 .ai_move:
     jsr advance_entity        ; every frame: accumulate speed, step on carry
@@ -23,7 +21,7 @@ run_ai:
     bne .ai_entity_loop
     rts
 call_ai:
-    jmp (ai_vec)
+    jmp (AI_VEC)
 
 ; --- AI routines. Enter with X = entity index; each must preserve X.
 ;     An AI routine only sets heading (ent_dx / ent_dy) and state (ent_state),
@@ -31,11 +29,54 @@ call_ai:
 ;     must not move the entity or touch ent_x / ent_y -- advance_entity owns
 ;     locomotion. ---
 
-; Grunt: wander. Mostly keeps its heading, occasionally rolls a new random one.
-ai_grunt:
+; Set ent_dx/ent_dy,x to one step toward the player (the sign of the offset on
+; each axis; coordinates are small unsigned cell numbers so a plain cmp gives
+; the ordering). May set both axes at once, i.e. diagonal movement.
+; Enter/leave with X = entity index. Preserves X. Clobbers A.
+face_player:
+    lda player_x
+    cmp ent_x,x
+    beq .fp_x_zero
+    bcs .fp_x_pos
+    lda #$ff
+    sta ent_dx,x
+    jmp .fp_y
+.fp_x_pos:
+    lda #1
+    sta ent_dx,x
+    jmp .fp_y
+.fp_x_zero:
+    lda #0
+    sta ent_dx,x
+.fp_y:
+    lda player_y
+    cmp ent_y,x
+    beq .fp_y_zero
+    bcs .fp_y_pos
+    lda #$ff
+    sta ent_dy,x
+    rts
+.fp_y_pos:
+    lda #1
+    sta ent_dy,x
+    rts
+.fp_y_zero:
+    lda #0
+    sta ent_dy,x
+    rts
+
+; Grunt / chaser / swarm: roll against typ_aggr (0..255, "0 = always wander"
+; .. "255 = always chase") to decide whether to face the player this decision,
+; or wander like the original grunt behavior. Personality comes entirely from
+; each type's aggr/speed/react data, not from separate code.
+ai_wander_or_chase:
+    ldy ent_type,x
+    lda RANDOM
+    cmp typ_aggr,y
+    bcc .woc_chase            ; RANDOM < typ_aggr: chase this decision
     lda RANDOM
     cmp #$40
-    bcs .ag_done             ; ~75%: keep the current heading
+    bcs .woc_done             ; ~75%: keep the current heading
     lda RANDOM
     and #$03
     tay
@@ -43,17 +84,61 @@ ai_grunt:
     sta ent_dx,x
     lda grunt_dy,y
     sta ent_dy,x
-.ag_done:
+.woc_done:
+    rts
+.woc_chase:
+    jsr face_player
     rts
 
-ai_chaser:
-    rts
+; Lurker: sits still until it shares a row or column with the player, then
+; dashes along that line at a burst speed. Drops back to its resting
+; speed/react the moment it loses alignment (passes the player, hits a wall,
+; or the player steps off the line). ent_state: 0 = resting, 1 = dashing.
+LURKER_DASH_SPEED = 220
+LURKER_DASH_REACT = 6
+
 ai_lurker:
+    lda player_x
+    cmp ent_x,x
+    beq .lk_aligned
+    lda player_y
+    cmp ent_y,x
+    beq .lk_aligned
+    lda ent_state,x
+    beq .lk_hold              ; already resting
+    jsr lurker_rest
+.lk_hold:
+    lda #0
+    sta ent_dx,x
+    sta ent_dy,x
     rts
+.lk_aligned:
+    lda #LURKER_DASH_REACT
+    sta ent_timer,x           ; re-check alignment often for as long as we dash
+    lda ent_state,x
+    bne .lk_face              ; already dashing
+    lda #1
+    sta ent_state,x
+    lda #LURKER_DASH_SPEED
+    sta ent_speed,x
+.lk_face:
+    jsr face_player
+    rts
+
+; Return a lurker to its resting speed/react and clear the dash flag.
+; Enter/leave with X = entity index. Preserves X. Clobbers A, Y.
+lurker_rest:
+    lda #0
+    sta ent_state,x
+    ldy ent_type,x
+    lda typ_speed,y
+    sta ent_speed,x
+    lda typ_react,y
+    sta ent_timer,x
+    rts
+
 ai_shooter:
-    rts
-ai_swarm:
-    rts
+    rts                        ; needs enemy-owned projectiles (milestone 5)
 
 grunt_dx: !byte $01, $ff, $00, $00
 grunt_dy: !byte $00, $00, $01, $ff

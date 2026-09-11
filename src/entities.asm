@@ -8,7 +8,7 @@ ent_moveacc: !fill MAX_ENT, 0     ; step accumulator: += ent_speed each frame, s
 ent_speed:   !fill MAX_ENT, 0     ; movement rate; cells/frame = n/256 (seeded from typ_speed)
 ent_dx:      !fill MAX_ENT, 0     ; heading, signed: $ff / $00 / $01
 ent_dy:      !fill MAX_ENT, 0
-ent_state:   !fill MAX_ENT, 0     ; per-AI state-machine state - For future expansion
+ent_state:   !fill MAX_ENT, 0     ; per-AI state-machine state (e.g. ai_lurker's rest/dash flag)
 ent_timer:   !fill MAX_ENT, 0     ; generic countdown (reaction delay, cooldown)
 ent_hp:      !fill MAX_ENT, 0
 
@@ -63,13 +63,20 @@ spawn_entity:
     sta ent_speed,x
     rts
 
-; Opening wave: 20 grunts (type 0) scattered across the play area.
+; Opening wave: 20 entities scattered across the play area, weighted 3:2:2:1
+; grunt:chaser:lurker:swarm (type 3, shooter, awaits enemy-owned projectiles).
+; Table length is a power of two so "RANDOM and #$07" indexes it with no bias.
+wave_types: !byte 0, 0, 0, 1, 1, 2, 2, 4
+
 spawn_wave:
     ldx #20
 .sw_loop:
     txa
     pha
-    lda #0
+    lda RANDOM
+    and #$07
+    tay
+    lda wave_types,y
     sta sp_type
     lda RANDOM
     and #$1f
