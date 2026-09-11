@@ -13,7 +13,6 @@ hit_enemy:
     tax                        ; X = enemy slot
     dec ent_hp,x
     bne .he_alive              ; wounded but alive (future: slow / flash)
-    jsr erase_prev             ; clear its on-screen glyph
     lda #0
     sta ent_active,x
 .he_alive:

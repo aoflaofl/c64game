@@ -19,10 +19,12 @@ start:
     jsr clear_screen
     jsr init_raster_irq
     jsr init_video
+    jsr init_renderer
     jsr init_player
     jsr init_entities
     jsr init_projectiles
     jsr spawn_wave
+    jsr render_frame
 
 loop:
     ; Block until the next frame is ready
@@ -41,17 +43,20 @@ game_tick:
     sta BORDER ; border color = black
 
     jsr joy2se
+    jsr update_game
+    jsr render_frame
+
+    lda #$01
+    sta BORDER ; border color = white — frame work done
+
+    rts
+
+update_game:
     jsr update_player_timed
     jsr player_fire
     jsr run_ai
     jsr update_projectiles
     jsr check_player_hit
-    jsr render_entities
-    jsr render_projectiles
-
-    lda #$01
-    sta BORDER ; border color = white — frame work done
-
     rts
 
 !src "src/timing.asm"
@@ -65,3 +70,4 @@ game_tick:
 !src "src/enemy_ai.asm"
 !src "src/projectiles.asm"
 !src "src/collision.asm"
+!src "src/renderer.asm"

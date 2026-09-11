@@ -1,8 +1,5 @@
 PLAYER_START_X = 20
 PLAYER_START_Y = 12
-PLAYER_CHAR    = $51
-PLAYER_COLOR   = $01
-BLANK_CHAR     = $20
 ; PLAYER_MOVE_DELAY = 2      ; move every other frame
 PLAYER_MOVE_DELAY = 3    ; move every third frame
 
@@ -32,7 +29,6 @@ init_player:
     sta player_dy            ; face up
     lda #PLAYER_LIVES_START
     sta player_lives
-    jsr draw_player
     rts
 
 update_player_timed:
@@ -57,8 +53,6 @@ update_player:
     rts
 
 move_player:
-    jsr erase_player
-
     ; Capture the full facing vector for this movement, including zeroes.
     lda joyhoriz
     sta player_dx
@@ -81,38 +75,20 @@ move_left:
 
 move_vertical:
     lda joyvert
-    beq draw_player
+    beq move_player_done
     bmi move_up
     lda player_y
     cmp #24
-    beq draw_player
+    beq move_player_done
     inc player_y
-    jmp draw_player
+    rts
 
 move_up:
     lda player_y
-    beq draw_player
+    beq move_player_done
     dec player_y
 
-draw_player:
-    jsr set_player_pointers
-    ldy player_x
-    lda #PLAYER_CHAR
-    sta (SCREEN_PTR),y
-    lda #PLAYER_COLOR
-    sta (COLOR_PTR),y
-    rts
-
-erase_player:
-    jsr set_player_pointers
-    ldy player_x
-    lda #BLANK_CHAR
-    sta (SCREEN_PTR),y
-    rts
-
-set_player_pointers:
-    ldy player_y
-    jsr set_screen_color_ptrs_for_y
+move_player_done:
     rts
 
 ; Auto-fire: while fire is held and the cooldown has expired, launch a bullet
@@ -158,13 +134,11 @@ player_hit:
     bne .ph_done
     dec player_lives
     ; TODO: game over when player_lives == 0 (later milestone)
-    jsr erase_player
     lda #PLAYER_START_X
     sta player_x
     lda #PLAYER_START_Y
     sta player_y
     lda #PLAYER_IFRAMES
     sta player_iframes
-    jsr draw_player
 .ph_done:
     rts

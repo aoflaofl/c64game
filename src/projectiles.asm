@@ -1,13 +1,9 @@
 MAX_SHOT   = 8
-SHOT_CHAR  = $2a       ; '*'  (placeholder glyph)
-SHOT_COLOR = $01       ; white
 SHOT_LIFE  = 24        ; frames before self-expire
 
 sh_active: !fill MAX_SHOT, 0    ; 0 = free slot
 sh_x:      !fill MAX_SHOT, 0    ; cell column 0..39
 sh_y:      !fill MAX_SHOT, 0    ; cell row 0..24
-sh_px:     !fill MAX_SHOT, 0    ; previous drawn cell, for erase
-sh_py:     !fill MAX_SHOT, 0
 sh_dx:     !fill MAX_SHOT, 0    ; heading, signed: $ff / $00 / $01
 sh_dy:     !fill MAX_SHOT, 0
 sh_life:   !fill MAX_SHOT, 0    ; frames remaining
@@ -46,10 +42,8 @@ spawn_projectile:
     sta sh_active,x
     lda pj_x
     sta sh_x,x
-    sta sh_px,x
     lda pj_y
     sta sh_y,x
-    sta sh_py,x
     lda pj_dx
     sta sh_dx,x
     lda pj_dy
@@ -60,40 +54,13 @@ spawn_projectile:
     sta sh_life,x
     ; point-blank: an enemy already on the muzzle cell dies now
     lda pj_owner
-    bne .sp_draw
+    bne .sp_done
     jsr shot_hitscan
-    lda sh_active,x
-    beq .sp_done               ; consumed at the muzzle
-.sp_draw:
-    jsr draw_shot
 .sp_done:
     rts
 
-; Draw shot X at its current cell. Preserves X. Clobbers A, Y.
-draw_shot:
-    lda sh_y,x
-    tay
-    jsr set_screen_color_ptrs_for_y
-    ldy sh_x,x
-    lda #SHOT_CHAR
-    sta (SCREEN_PTR),y
-    lda #SHOT_COLOR
-    sta (COLOR_PTR),y
-    rts
-
-; Blank the cell shot X was last drawn at. Preserves X. Clobbers A, Y.
-erase_shot:
-    lda sh_py,x
-    tay
-    jsr set_screen_color_ptrs_for_y
-    ldy sh_px,x
-    lda #BLANK_CHAR
-    sta (SCREEN_PTR),y
-    rts
-
-; Erase shot X and free its slot. Preserves X. Clobbers A, Y.
+; Free shot X. Its previous image is removed by the next render pass.
 despawn_shot:
-    jsr erase_shot
     lda #0
     sta sh_active,x
     rts
@@ -156,29 +123,4 @@ shot_hitscan:
     iny
     cpy #MAX_ENT
     bne .shs_loop
-    rts
-
-; Redraw every shot whose cell changed since the last render.
-render_projectiles:
-    ldx #0
-.rp_loop:
-    lda sh_active,x
-    beq .rp_next
-    lda sh_x,x
-    cmp sh_px,x
-    bne .rp_moved
-    lda sh_y,x
-    cmp sh_py,x
-    beq .rp_next
-.rp_moved:
-    jsr erase_shot
-    jsr draw_shot
-    lda sh_x,x
-    sta sh_px,x
-    lda sh_y,x
-    sta sh_py,x
-.rp_next:
-    inx
-    cpx #MAX_SHOT
-    bne .rp_loop
     rts

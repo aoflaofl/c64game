@@ -1,6 +1,6 @@
 ASM = acme
 SRC = src/main.asm
-DEPS = src/timing.asm src/random.asm src/hardware.asm src/zeropage.asm src/joystick.asm src/player.asm src/raster_irq.asm src/video.asm src/entity_types.asm src/entities.asm src/enemy_ai.asm src/projectiles.asm src/collision.asm
+DEPS = src/timing.asm src/random.asm src/hardware.asm src/zeropage.asm src/joystick.asm src/player.asm src/raster_irq.asm src/video.asm src/entity_types.asm src/entities.asm src/enemy_ai.asm src/projectiles.asm src/collision.asm src/renderer.asm
 PRG = build/game.prg
 
 .PHONY: all run clean
