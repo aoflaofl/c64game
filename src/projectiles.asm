@@ -65,8 +65,9 @@ despawn_shot:
     sta sh_active,x
     rts
 
-; Per-frame: age, move (1 cell/frame), cull at the play-field edge, and — for
-; player-owned shots — test the entered cell against every enemy.
+; Per-frame: age, move (1 cell/frame), cull at the play-field edge, and test
+; the entered cell against the shot's target -- every enemy for a player-owned
+; shot, or just the player's cell for an enemy-owned one.
 update_projectiles:
     ldx #0
 .up_loop:
@@ -90,8 +91,19 @@ update_projectiles:
     bcs .up_kill              ; off top/bottom edge
 
     lda sh_owner,x
-    bne .up_next              ; enemy shot: no target wired yet
+    bne .up_enemy_shot
     jsr shot_hitscan
+    jmp .up_next
+
+.up_enemy_shot:
+    lda sh_x,x
+    cmp player_x
+    bne .up_next
+    lda sh_y,x
+    cmp player_y
+    bne .up_next
+    jsr player_hit
+    jsr despawn_shot
     jmp .up_next
 
 .up_kill:

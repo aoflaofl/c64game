@@ -137,8 +137,67 @@ lurker_rest:
     sta ent_timer,x
     rts
 
+; Fire one shot straight along the shared row or column, if the shooter and
+; the player are currently aligned on one. Independent of ent_dx/ent_dy
+; (which the movement step just above may have set to a wander direction) --
+; alignment is checked fresh against actual positions. Fire rate is naturally
+; capped by the caller's decision cadence (typ_react); no separate cooldown.
+; Enter/leave with X = entity index. Preserves X. Clobbers A, Y.
+shooter_try_fire:
+    lda player_x
+    cmp ent_x,x
+    bne .stf_check_row
+    ; column-aligned: vertical shot
+    lda player_y
+    cmp ent_y,x
+    beq .stf_done              ; standing on the player: no shot
+    bcs .stf_v_down
+    lda #$ff
+    jmp .stf_v_set
+.stf_v_down:
+    lda #1
+.stf_v_set:
+    sta pj_dy
+    lda #0
+    sta pj_dx
+    jmp .stf_fire
+.stf_check_row:
+    lda player_y
+    cmp ent_y,x
+    bne .stf_done               ; not aligned on either axis
+    ; row-aligned: horizontal shot
+    lda player_x
+    cmp ent_x,x
+    bcs .stf_h_right
+    lda #$ff
+    jmp .stf_h_set
+.stf_h_right:
+    lda #1
+.stf_h_set:
+    sta pj_dx
+    lda #0
+    sta pj_dy
+.stf_fire:
+    lda ent_x,x
+    sta pj_x
+    lda ent_y,x
+    sta pj_y
+    lda #1
+    sta pj_owner
+    txa
+    pha
+    jsr spawn_projectile        ; clobbers X (shot-slot scratch); restored below
+    pla
+    tax
+.stf_done:
+    rts
+
+; Shooter: moves via the same wander/chase blend as grunt/chaser/swarm (its
+; own typ_aggr), and independently takes a shot whenever aligned.
 ai_shooter:
-    rts                        ; needs enemy-owned projectiles (milestone 5)
+    jsr ai_wander_or_chase
+    jsr shooter_try_fire
+    rts
 
 grunt_dx: !byte $01, $ff, $00, $00
 grunt_dy: !byte $00, $00, $01, $ff

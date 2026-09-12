@@ -63,10 +63,10 @@ spawn_entity:
     sta ent_speed,x
     rts
 
-; Opening wave: 20 entities scattered across the play area, weighted 3:2:2:1
-; grunt:chaser:lurker:swarm (type 3, shooter, awaits enemy-owned projectiles).
-; Table length is a power of two so "RANDOM and #$07" indexes it with no bias.
-wave_types: !byte 0, 0, 0, 1, 1, 2, 2, 4
+; Opening wave: 20 entities scattered across the play area, weighted
+; 2:2:2:1:1 grunt:chaser:lurker:shooter:swarm. Table length is a power of two
+; so "RANDOM and #$07" indexes it with no bias.
+wave_types: !byte 0, 0, 1, 1, 2, 2, 3, 4
 
 spawn_wave:
     ldx #20
