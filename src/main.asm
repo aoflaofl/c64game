@@ -61,6 +61,7 @@ update_game:
     jsr run_ai
     jsr update_projectiles
     jsr check_player_hit
+    jsr spawn_director
     rts
 
 !src "src/timing.asm"

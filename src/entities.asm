@@ -63,16 +63,14 @@ spawn_entity:
     sta ent_speed,x
     rts
 
-; Opening wave: 20 entities scattered across the play area, weighted
-; 2:2:2:1:1 grunt:chaser:lurker:shooter:swarm. Table length is a power of two
-; so "RANDOM and #$07" indexes it with no bias.
+; Weighted 2:2:2:1:1 grunt:chaser:lurker:shooter:swarm. Table length is a
+; power of two so "RANDOM and #$07" indexes it with no bias.
 wave_types: !byte 0, 0, 1, 1, 2, 2, 3, 4
 
-spawn_wave:
-    ldx #20
-.sw_loop:
-    txa
-    pha
+; Spawn one entity of a random wave_types type at a random interior position
+; (column 4..35, row 4..19). Does nothing if the pool is full (spawn_entity's
+; own limit). Clobbers A, X, Y.
+spawn_random_entity:
     lda RANDOM
     and #$07
     tay
@@ -89,8 +87,54 @@ spawn_wave:
     adc #4
     sta sp_y                ; row 4..19
     jsr spawn_entity
+    rts
+
+; Opening wave: 20 entities scattered across the play area.
+spawn_wave:
+    ldx #20
+.sw_loop:
+    txa
+    pha
+    jsr spawn_random_entity
     pla
     tax
     dex
     bne .sw_loop
+    rts
+
+; --- Spawn director: keeps the population near SPAWN_TARGET_POP after the
+;     opening wave, trickling in one replacement at a time as enemies die. ---
+SPAWN_TARGET_POP = 20   ; maintain at least this many enemies (MAX_ENT = 32)
+SPAWN_INTERVAL   = 30   ; frames between trickle spawns (~0.6s at 50Hz)
+
+spawn_timer: !byte SPAWN_INTERVAL
+
+; Called once per frame from game_tick. Every SPAWN_INTERVAL frames, spawns
+; one entity if the active count is below SPAWN_TARGET_POP. Clobbers A, X, Y.
+spawn_director:
+    dec spawn_timer
+    bne .sd_done
+    lda #SPAWN_INTERVAL
+    sta spawn_timer
+
+    jsr count_active_entities   ; -> A
+    cmp #SPAWN_TARGET_POP
+    bcs .sd_done                 ; already at or above the floor
+    jsr spawn_random_entity
+.sd_done:
+    rts
+
+; Count active entities. Returns the count in A. Clobbers A, X, Y.
+count_active_entities:
+    ldy #0
+    ldx #0
+.cae_loop:
+    lda ent_active,x
+    beq .cae_next
+    iny
+.cae_next:
+    inx
+    cpx #MAX_ENT
+    bne .cae_loop
+    tya
     rts
