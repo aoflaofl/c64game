@@ -23,7 +23,7 @@ start:
     jsr init_player
     jsr init_entities
     jsr init_projectiles
-    jsr spawn_wave
+    jsr start_wave
     jsr render_frame
 
 loop:

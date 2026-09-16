@@ -63,9 +63,11 @@ spawn_entity:
     sta ent_speed,x
     rts
 
-; Weighted 2:2:2:1:1 grunt:chaser:lurker:shooter:swarm. Table length is a
-; power of two so "RANDOM and #$07" indexes it with no bias.
-wave_types: !byte 0, 0, 1, 1, 2, 2, 3, 4
+; Type-mix tiers, tougher as wave_number climbs (see select_wave_tier).
+; Weighted, table length a power of two so "RANDOM and #$07" is unbiased.
+wave_types_tier0: !byte 0, 0, 1, 1, 2, 2, 3, 4   ; waves 1-2: 2:2:2:1:1 g:c:l:s:sw
+wave_types_tier1: !byte 0, 1, 1, 2, 2, 3, 3, 4   ; waves 3-4: fewer grunts
+wave_types_tier2: !byte 1, 1, 2, 2, 3, 3, 4, 4   ; waves 5+:  no grunts at all
 
 SPAWN_SAFE_RADIUS = 6   ; keep new spawns at least this far from the player...
 SPAWN_MAX_TRIES   = 4   ; ...retrying the roll up to this many times for it
@@ -100,17 +102,18 @@ spawn_pos_too_close:
     lda #0
     rts
 
-; Spawn one entity of a random wave_types type at a random interior position
-; (column 4..35, row 4..19), rerolling the position (up to SPAWN_MAX_TRIES
-; times) if it lands too close to the player -- so a trickle-in enemy reads
-; as "appeared elsewhere and is approaching," not a point-blank ambush.
+; Spawn one entity of a random type drawn from the current wave's tier (see
+; select_wave_tier / WAVE_TYPES_PTR) at a random interior position (column
+; 4..35, row 4..19), rerolling the position (up to SPAWN_MAX_TRIES times) if
+; it lands too close to the player -- so a spawn reads as "appeared elsewhere
+; and is approaching," not a point-blank ambush.
 ; Does nothing if the pool is full (spawn_entity's own limit).
 ; Clobbers A, X, Y.
 spawn_random_entity:
     lda RANDOM
     and #$07
     tay
-    lda wave_types,y
+    lda (WAVE_TYPES_PTR),y
     sta sp_type
 
     ldy #SPAWN_MAX_TRIES
@@ -134,38 +137,103 @@ spawn_random_entity:
     jsr spawn_entity
     rts
 
-; Opening wave: 20 entities scattered across the play area.
-spawn_wave:
-    ldx #20
-.sw_loop:
+; --- Discrete waves: a wave bursts its whole population at once, gets
+;     whittled down by the player, and once it's fully cleared, a brief
+;     pause leads into the next, bigger and tougher wave. ---
+WAVE_POP_BASE     = 20    ; wave 1's population
+WAVE_POP_STEP     = 2     ; population growth per wave
+WAVE_POP_MAX      = 28    ; cap, leaving headroom under MAX_ENT = 32
+WAVE_PAUSE_FRAMES = 100   ; breather between waves (~2s at 50Hz)
+
+wave_number: !byte 1      ; current wave (1-based). Growth assumes this stays
+                          ; well under ~100 (see wave_population); a real
+                          ; playtest is nowhere near that many waves.
+wave_pause:  !byte 0      ; >0 while pausing between waves; 0 = wave active
+wave_target: !byte 0      ; this wave's population, stashed across the burst
+
+; Point WAVE_TYPES_PTR at the type-mix tier for the current wave_number.
+; Clobbers A.
+select_wave_tier:
+    lda wave_number
+    cmp #5
+    bcs .swt_tier2
+    cmp #3
+    bcs .swt_tier1
+    lda #<wave_types_tier0
+    sta WAVE_TYPES_PTR
+    lda #>wave_types_tier0
+    sta WAVE_TYPES_PTR + 1
+    rts
+.swt_tier1:
+    lda #<wave_types_tier1
+    sta WAVE_TYPES_PTR
+    lda #>wave_types_tier1
+    sta WAVE_TYPES_PTR + 1
+    rts
+.swt_tier2:
+    lda #<wave_types_tier2
+    sta WAVE_TYPES_PTR
+    lda #>wave_types_tier2
+    sta WAVE_TYPES_PTR + 1
+    rts
+
+; Returns this wave's population target in A: WAVE_POP_BASE plus
+; WAVE_POP_STEP per wave past the first, capped at WAVE_POP_MAX.
+; Clobbers A, X.
+wave_population:
+    lda wave_number
+    sec
+    sbc #1
+    tax                        ; X = waves past the first
+    lda #WAVE_POP_BASE
+    cpx #0
+    beq .wp_clamp
+.wp_add_loop:
+    clc
+    adc #WAVE_POP_STEP
+    dex
+    bne .wp_add_loop
+.wp_clamp:
+    cmp #WAVE_POP_MAX + 1
+    bcc .wp_done
+    lda #WAVE_POP_MAX
+.wp_done:
+    rts
+
+; Begin the current wave_number: select its type-mix tier, compute its
+; population target, and burst-spawn that many entities. Clobbers A, X, Y.
+start_wave:
+    jsr select_wave_tier
+    jsr wave_population
+    sta wave_target
+    ldx wave_target
+.stw_loop:
     txa
     pha
     jsr spawn_random_entity
     pla
     tax
     dex
-    bne .sw_loop
+    bne .stw_loop
     rts
 
-; --- Spawn director: keeps the population near SPAWN_TARGET_POP after the
-;     opening wave, trickling in one replacement at a time as enemies die. ---
-SPAWN_TARGET_POP = 20   ; maintain at least this many enemies (MAX_ENT = 32)
-SPAWN_INTERVAL   = 30   ; frames between trickle spawns (~0.6s at 50Hz)
-
-spawn_timer: !byte SPAWN_INTERVAL
-
-; Called once per frame from game_tick. Every SPAWN_INTERVAL frames, spawns
-; one entity if the active count is below SPAWN_TARGET_POP. Clobbers A, X, Y.
+; Called once per frame from game_tick. While a wave is active, watches for
+; it being fully cleared (no active entities); once cleared, pauses for
+; WAVE_PAUSE_FRAMES, then advances wave_number and bursts the next wave.
+; Clobbers A, X, Y.
 spawn_director:
-    dec spawn_timer
+    lda wave_pause
+    beq .sd_active
+    dec wave_pause
     bne .sd_done
-    lda #SPAWN_INTERVAL
-    sta spawn_timer
-
-    jsr count_active_entities   ; -> A
-    cmp #SPAWN_TARGET_POP
-    bcs .sd_done                 ; already at or above the floor
-    jsr spawn_random_entity
+    inc wave_number
+    jsr start_wave
+    rts
+.sd_active:
+    jsr count_active_entities
+    bne .sd_done               ; still enemies alive: wave in progress
+    lda #WAVE_PAUSE_FRAMES
+    sta wave_pause
 .sd_done:
     rts
 

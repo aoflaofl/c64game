@@ -8,3 +8,7 @@ COLOR_PTR      = $fd
 ; classic 6502 indirect-JMP page-wrap bug, and a code-segment label can drift
 ; onto that boundary as the binary grows. $02 never will.
 AI_VEC         = $02
+
+; Source pointer for spawn_random_entity's indirect read of whichever
+; wave_types tier select_wave_tier last pointed it at.
+WAVE_TYPES_PTR = $04
