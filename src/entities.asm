@@ -39,7 +39,7 @@ spawn_entity:
     bne .se_find
     rts                     ; pool full
 .se_found:
-    lda #1
+    lda #$01
     sta ent_active,x
     lda sp_type
     sta ent_type,x
@@ -67,15 +67,54 @@ spawn_entity:
 ; power of two so "RANDOM and #$07" indexes it with no bias.
 wave_types: !byte 0, 0, 1, 1, 2, 2, 3, 4
 
+SPAWN_SAFE_RADIUS = 6   ; keep new spawns at least this far from the player...
+SPAWN_MAX_TRIES   = 4   ; ...retrying the roll up to this many times for it
+
+; Returns A=1 if sp_x/sp_y is within SPAWN_SAFE_RADIUS of the player on BOTH
+; axes ("too close"), or A=0 if either axis already clears it ("ok to use").
+; Clobbers A.
+spawn_pos_too_close:
+    lda sp_x
+    sec
+    sbc player_x
+    bpl .spc_x_pos
+    eor #$ff
+    clc
+    adc #1                  ; A = abs(sp_x - player_x)
+.spc_x_pos:
+    cmp #SPAWN_SAFE_RADIUS + 1
+    bcs .spc_ok              ; x alone is already far enough
+    lda sp_y
+    sec
+    sbc player_y
+    bpl .spc_y_pos
+    eor #$ff
+    clc
+    adc #1                  ; A = abs(sp_y - player_y)
+.spc_y_pos:
+    cmp #SPAWN_SAFE_RADIUS + 1
+    bcs .spc_ok              ; y alone is already far enough
+    lda #1                   ; both axes within radius: too close
+    rts
+.spc_ok:
+    lda #0
+    rts
+
 ; Spawn one entity of a random wave_types type at a random interior position
-; (column 4..35, row 4..19). Does nothing if the pool is full (spawn_entity's
-; own limit). Clobbers A, X, Y.
+; (column 4..35, row 4..19), rerolling the position (up to SPAWN_MAX_TRIES
+; times) if it lands too close to the player -- so a trickle-in enemy reads
+; as "appeared elsewhere and is approaching," not a point-blank ambush.
+; Does nothing if the pool is full (spawn_entity's own limit).
+; Clobbers A, X, Y.
 spawn_random_entity:
     lda RANDOM
     and #$07
     tay
     lda wave_types,y
     sta sp_type
+
+    ldy #SPAWN_MAX_TRIES
+.sre_retry:
     lda RANDOM
     and #$1f
     clc
@@ -86,6 +125,12 @@ spawn_random_entity:
     clc
     adc #4
     sta sp_y                ; row 4..19
+
+    jsr spawn_pos_too_close
+    beq .sre_use             ; far enough from the player: use it
+    dey
+    bne .sre_retry           ; out of tries: fall through and use it anyway
+.sre_use:
     jsr spawn_entity
     rts
 
