@@ -98,12 +98,12 @@ update_projectiles:
     jmp .up_next
 
 .up_enemy_shot:
-    lda sh_x,x
-    cmp player_x
-    bne .up_next
-    lda sh_y,x
-    cmp player_y
-    bne .up_next
+    lda player_x
+    sta hit_test_x
+    lda player_y
+    sta hit_test_y
+    jsr shot_near_target
+    beq .up_next
     jsr player_hit
     jsr despawn_shot
     jmp .up_next
@@ -116,20 +116,20 @@ update_projectiles:
     bne .up_loop
     rts
 
-; Scan the enemy pool for one occupying shot X's cell. On a hit: kill the enemy
-; (hit_enemy) and despawn the shot. Enter with X = shot slot. Preserves X.
-; Clobbers A, Y.
+; Scan the enemy pool for one within SHOT_HIT_RADIUS of shot X's cell. On a
+; hit: kill the enemy (hit_enemy) and despawn the shot. Enter with X = shot
+; slot. Preserves X. Clobbers A, Y.
 shot_hitscan:
     ldy #0
 .shs_loop:
     lda ent_active,y
     beq .shs_next
     lda ent_x,y
-    cmp sh_x,x
-    bne .shs_next
+    sta hit_test_x
     lda ent_y,y
-    cmp sh_y,x
-    bne .shs_next
+    sta hit_test_y
+    jsr shot_near_target
+    beq .shs_next
     jsr hit_enemy            ; Y = enemy slot; preserves X
     jsr despawn_shot         ; X = shot slot
     rts
