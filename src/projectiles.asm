@@ -1,5 +1,7 @@
 MAX_SHOT   = 8
-SHOT_LIFE  = 24        ; frames before self-expire
+; At 1 cell/frame, SHOT_LIFE is also the max range in cells; 40 covers the
+; full play-field width so a shot can reach an enemy spawned clear across it.
+SHOT_LIFE  = 40        ; frames before self-expire
 
 sh_active: !fill MAX_SHOT, 0    ; 0 = free slot
 sh_x:      !fill MAX_SHOT, 0    ; cell column 0..39
