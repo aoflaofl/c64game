@@ -127,11 +127,16 @@ player_fire:
     rts
 
 ; Enemy contact: lose a life, recentre the player, grant invulnerability.
-; Ignored while already invulnerable.
+; Ignored while already invulnerable. player_lives clamps at 0 rather than
+; wrapping to $ff -- there's no game-over state yet (see TODO below), so a
+; hit at 0 lives still recentres/grants i-frames, it just stops counting down.
 player_hit:
     lda player_iframes
     bne .ph_done
+    lda player_lives
+    beq .ph_recentre
     dec player_lives
+.ph_recentre:
     ; TODO: game over when player_lives == 0 (later milestone)
     lda #PLAYER_START_X
     sta player_x
