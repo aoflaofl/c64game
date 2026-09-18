@@ -19,7 +19,11 @@ typ_char:    !byte $51, $52, $53, $54, $55
 typ_color:   !byte  2,   5,   7,   4,   3
 ; Player moves 1 cell / 3 frames = ~85 (cells/sec = n/5.12; player is ~16.7).
 ; Every type now sits below player speed so a straight chase can be outrun.
-typ_speed:   !byte 32,  64,  16,  64,  40   ; fraction added per tick; cells/tick = n/256
+; Chaser/shooter were at 64 (75% of player) -- close enough, combined with
+; frequent re-aiming (typ_react below), that they stayed glued to the player
+; instead of falling behind on a straight run. Dropped to 48 (56%) so a
+; player moving in a line pulls away instead of staying pinned.
+typ_speed:   !byte 32,  48,  16,  48,  40   ; fraction added per tick; cells/tick = n/256
 typ_hp:      !byte  1,   1,   1,   1,   1   ; one-shot for now; wounding comes later
 typ_weapon:  !byte  0,   0,   1,   2,   1   ; index into weapon tables (0 = melee/contact) - For future expansion
 typ_aggr:    !byte  0, 255,  64, 180, 128   ; 0=wander … 255=beeline for player (read by ai_wander_or_chase)

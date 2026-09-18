@@ -94,7 +94,10 @@ ai_wander_or_chase:
 ; dashes along that line at a burst speed. Drops back to its resting
 ; speed/react the moment it loses alignment (passes the player, hits a wall,
 ; or the player steps off the line). ent_state: 0 = resting, 1 = dashing.
-LURKER_DASH_SPEED = 220
+; 220 (2.6x player speed) made the dash nearly unavoidable once aligned --
+; there wasn't enough time to react and break alignment before it landed.
+; 130 (~1.5x player) still reads as a burst but is outrunnable.
+LURKER_DASH_SPEED = 130
 LURKER_DASH_REACT = 6
 
 ai_lurker:
