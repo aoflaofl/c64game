@@ -12,7 +12,7 @@ $(PRG): $(SRC) $(DEPS)
 	$(ASM) $(SRC)
 
 run: $(PRG)
-	x64sc -default +drive8truedrive -autostartprgmode 0 $(PRG)
+	x64sc +drive8truedrive -autostartprgmode 0 $(PRG)
 
 clean:
 	rm -rf build/*
