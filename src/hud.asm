@@ -153,3 +153,79 @@ draw_score:
     cpx #SCORE_DIGITS
     bne .ds_digit_loop
     rts
+
+; --- Game-over overlay: drawn once, on rows within the playfield, using
+;     renderer.asm's set_screen_color_ptrs_for_y + TXT_PTR since (unlike the
+;     row-0 HUD above) the row isn't fixed at assemble time. ---
+
+gt_row: !byte 0
+gt_col: !byte 0
+gt_len: !byte 0
+
+game_over_msg1: !byte $07,$01,$0d,$05,$20,$0f,$16,$05,$12   ; "GAME OVER"
+game_over_msg2: !byte $10,$12,$05,$13,$13,$20,$06,$09,$12,$05,$20,$14,$0f,$20,$12,$05,$13,$14,$01,$12,$14 ; "PRESS FIRE TO RESTART"
+
+; Draws gt_len screen-code bytes from (TXT_PTR) at (gt_row, gt_col).
+; Clobbers A, Y.
+draw_text_row:
+    ldy gt_row
+    jsr set_screen_color_ptrs_for_y
+    lda SCREEN_PTR
+    clc
+    adc gt_col
+    sta SCREEN_PTR
+    lda SCREEN_PTR+1
+    adc #0
+    sta SCREEN_PTR+1
+    lda COLOR_PTR
+    clc
+    adc gt_col
+    sta COLOR_PTR
+    lda COLOR_PTR+1
+    adc #0
+    sta COLOR_PTR+1
+
+    ldy #0
+.dtr_loop:
+    cpy gt_len
+    beq .dtr_done
+    lda (TXT_PTR),y
+    sta (SCREEN_PTR),y
+    lda #HUD_COLOR
+    sta (COLOR_PTR),y
+    iny
+    jmp .dtr_loop
+.dtr_done:
+    rts
+
+; Overlay "GAME OVER" on top of the final frame. Called once, right after
+; that frame is rendered. Clobbers A, Y.
+draw_game_over_screen:
+    lda #<game_over_msg1
+    sta TXT_PTR
+    lda #>game_over_msg1
+    sta TXT_PTR+1
+    lda #9
+    sta gt_len
+    lda #15
+    sta gt_col
+    lda #11
+    sta gt_row
+    jsr draw_text_row
+    rts
+
+; Add "PRESS FIRE TO RESTART" under the game-over message, once the restart
+; lockout (game_state.asm) has expired. Clobbers A, Y.
+draw_restart_prompt:
+    lda #<game_over_msg2
+    sta TXT_PTR
+    lda #>game_over_msg2
+    sta TXT_PTR+1
+    lda #21
+    sta gt_len
+    lda #9
+    sta gt_col
+    lda #13
+    sta gt_row
+    jsr draw_text_row
+    rts

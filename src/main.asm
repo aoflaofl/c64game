@@ -48,6 +48,20 @@ game_tick:
 
     jsr joy2se
 
+    lda game_over
+    beq .gt_active
+    lda game_over_timer
+    beq .gt_armed
+    dec game_over_timer   ; lockout: joystick ignored while it counts down
+    bne .gt_done
+    jsr draw_restart_prompt   ; lockout just expired: show the prompt
+    jmp .gt_done
+.gt_armed:
+    lda joyfire
+    beq .gt_done          ; frozen, no restart requested yet
+    jsr reset_game        ; falls through into a normal tick below
+
+.gt_active:
     jsr update_game
 
     lda #COLOR_RED
@@ -58,6 +72,10 @@ game_tick:
     lda #COLOR_WHITE
     sta BORDER ; border color = white — frame work done
 
+    lda game_over
+    beq .gt_done
+    jsr draw_game_over_screen   ; just transitioned this tick: overlay once
+.gt_done:
     rts
 
 update_game:
@@ -82,3 +100,4 @@ update_game:
 !src "src/collision.asm"
 !src "src/renderer.asm"
 !src "src/hud.asm"
+!src "src/game_state.asm"

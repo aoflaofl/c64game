@@ -1,8 +1,8 @@
 ;
 ; renderer.asm owns the dynamic actor layer (rows 1..24: player, enemies,
-; projectiles), erased and redrawn every frame. hud.asm owns row 0 -- static
-; text, touched only when the underlying value changes, not on the
-; erase/redraw-every-frame model below.
+; projectiles), erased and redrawn every frame. hud.asm owns row 0 and the
+; game-over overlay -- static text, touched only when the underlying value
+; changes, not on the erase/redraw-every-frame model below.
 ;
 
 BLANK_CHAR   = $20

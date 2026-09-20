@@ -129,18 +129,21 @@ player_fire:
     rts
 
 ; Enemy contact: lose a life, recentre the player, grant invulnerability.
-; Ignored while already invulnerable. player_lives clamps at 0 rather than
-; wrapping to $ff -- there's no game-over state yet (see TODO below), so a
-; hit at 0 lives still recentres/grants i-frames, it just stops counting down.
+; Ignored while already invulnerable or already at 0 lives (game_state.asm's
+; trigger_game_over has frozen play by then). The life that brings the count
+; to 0 skips the recentre/i-frames and ends the game instead.
 player_hit:
     lda player_iframes
     bne .ph_done
     lda player_lives
-    beq .ph_recentre
+    beq .ph_done
     dec player_lives
-    jsr draw_lives
+    jsr draw_lives              ; clobbers flags; re-test player_lives below
+    lda player_lives
+    bne .ph_recentre
+    jsr trigger_game_over
+    rts
 .ph_recentre:
-    ; TODO: game over when player_lives == 0 (later milestone)
     lda #PLAYER_START_X
     sta player_x
     lda #PLAYER_START_Y

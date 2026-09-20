@@ -12,3 +12,6 @@ AI_VEC         = $02
 ; Source pointer for spawn_random_entity's indirect read of whichever
 ; wave_types tier select_wave_tier last pointed it at.
 WAVE_TYPES_PTR = $04
+
+; Source pointer for hud.asm's draw_text_row (arbitrary-row HUD/game-over text).
+TXT_PTR        = $06
