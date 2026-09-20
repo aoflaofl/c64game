@@ -227,6 +227,7 @@ spawn_director:
     dec wave_pause
     bne .sd_done
     inc wave_number
+    jsr draw_wave
     jsr start_wave
     rts
 .sd_active:

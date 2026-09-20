@@ -44,7 +44,7 @@ shot_near_target:
     rts
 
 ; Apply one hit to enemy Y. Despawns it when HP reaches 0.
-; Enter with Y = enemy slot. Preserves X. Clobbers A.
+; Enter with Y = enemy slot. Preserves X. Clobbers A, Y.
 ; (6502 has no DEC abs,Y, so the enemy slot is moved into X for the work and
 ;  the caller's X is saved across the call.)
 hit_enemy:
@@ -56,6 +56,9 @@ hit_enemy:
     bne .he_alive              ; wounded but alive (future: slow / flash)
     lda #0
     sta ent_active,x
+    ldy ent_type,x
+    lda typ_score,y
+    jsr add_score
 .he_alive:
     pla
     tax                        ; restore shot slot

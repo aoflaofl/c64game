@@ -1,5 +1,5 @@
 PLAYER_START_X = 20
-PLAYER_START_Y = 12
+PLAYER_START_Y = 13   ; row 0 is the HUD; playfield is rows 1..24
 PLAYER_MOVE_DELAY = 3    ; move every third frame
 
 PLAYER_LIVES_START = 3
@@ -84,6 +84,7 @@ move_vertical:
 
 move_up:
     lda player_y
+    cmp #1
     beq move_player_done
     dec player_y
 
@@ -113,8 +114,9 @@ player_fire:
     clc
     adc player_dy
     sta pj_y
+    beq .pf_done               ; muzzle off-field (row 0 is the HUD)
     cmp #25
-    bcs .pf_done
+    bcs .pf_done               ; muzzle off-field (at edge, facing outward)
 
     lda player_dx
     sta pj_dx
@@ -136,6 +138,7 @@ player_hit:
     lda player_lives
     beq .ph_recentre
     dec player_lives
+    jsr draw_lives
 .ph_recentre:
     ; TODO: game over when player_lives == 0 (later milestone)
     lda #PLAYER_START_X

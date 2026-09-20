@@ -1,5 +1,8 @@
 ;
-; only renderer.asm touches the screen, called once per frame after all updates
+; renderer.asm owns the dynamic actor layer (rows 1..24: player, enemies,
+; projectiles), erased and redrawn every frame. hud.asm owns row 0 -- static
+; text, touched only when the underlying value changes, not on the
+; erase/redraw-every-frame model below.
 ;
 
 BLANK_CHAR   = $20

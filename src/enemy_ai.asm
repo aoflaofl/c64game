@@ -243,6 +243,7 @@ step_cell:
     jmp .sc_done
 .sc_up:
     lda ent_y,x
+    cmp #1
     beq .sc_done
     dec ent_y,x
 .sc_done:

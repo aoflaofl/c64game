@@ -23,6 +23,10 @@ start:
     jsr init_player
     jsr init_entities
     jsr init_projectiles
+    jsr draw_hud_static
+    jsr draw_score
+    jsr draw_lives
+    jsr draw_wave
     jsr start_wave
     jsr render_frame
 
@@ -43,6 +47,7 @@ game_tick:
     sta BORDER ; border color = black - start game state update
 
     jsr joy2se
+
     jsr update_game
 
     lda #COLOR_RED
@@ -76,3 +81,4 @@ update_game:
 !src "src/projectiles.asm"
 !src "src/collision.asm"
 !src "src/renderer.asm"
+!src "src/hud.asm"

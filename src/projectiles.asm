@@ -89,6 +89,7 @@ update_projectiles:
     clc
     adc sh_dy,x
     sta sh_y,x
+    beq .up_kill              ; entered row 0 (the HUD): off the top edge
     cmp #25
     bcs .up_kill              ; off top/bottom edge
 
