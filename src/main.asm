@@ -63,6 +63,10 @@ game_tick:
 
 .gt_active:
     jsr update_game
+!ifdef PROFILE {
+    ldx #0
+    jsr prof_mark
+}
 
     lda #COLOR_RED
     sta BORDER ; border color = red - start frame update
@@ -71,6 +75,10 @@ game_tick:
 
     lda #COLOR_WHITE
     sta BORDER ; border color = white — frame work done
+!ifdef PROFILE {
+    ldx #1
+    jsr prof_mark
+}
 
     lda game_over
     beq .gt_done
@@ -101,3 +109,6 @@ update_game:
 !src "src/renderer.asm"
 !src "src/hud.asm"
 !src "src/game_state.asm"
+!ifdef PROFILE {
+!src "src/prof.asm"
+}
