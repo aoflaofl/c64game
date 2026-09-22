@@ -54,6 +54,7 @@ hit_enemy:
     tax                        ; X = enemy slot
     dec ent_hp,x
     bne .he_alive              ; wounded but alive (future: slow / flash)
+    jsr grid_clear
     lda #0
     sta ent_active,x
     ldy ent_type,x

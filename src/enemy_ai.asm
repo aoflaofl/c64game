@@ -217,34 +217,99 @@ advance_entity:
     bcs step_cell
     rts
 
-; Move entity X one cell along ent_dx / ent_dy, clamped to the play area.
-; Preserves X. Clobbers A.
+; Candidate/target cells for step_cell (named globals, per the codebase's
+; parameter-passing convention).
+step_nx: !byte 0                ; heading applied to the current cell, clamped
+step_ny: !byte 0
+step_cx: !byte 0                ; candidate handed to step_commit_if_free
+step_cy: !byte 0
+
+; Move entity X one cell along ent_dx / ent_dy, clamped to the play area
+; (rows 1..24 -- row 0 is the HUD -- and columns 0..39) and blocked by the
+; occupancy grid: enemies never share a cell. A blocked diagonal slides along
+; one axis (x first, then y); if both are blocked, or the entity is already
+; against the wall, it stays put and tries again on its next step.
+; Preserves X. Clobbers A, Y.
 step_cell:
+    lda ent_x,x
+    sta step_nx
     lda ent_dx,x
     beq .sc_vert
     bmi .sc_left
-    lda ent_x,x
+    lda step_nx
     cmp #39
     bcs .sc_vert
-    inc ent_x,x
+    inc step_nx
     jmp .sc_vert
 .sc_left:
-    lda ent_x,x
+    lda step_nx
     beq .sc_vert
-    dec ent_x,x
+    dec step_nx
 .sc_vert:
+    lda ent_y,x
+    sta step_ny
     lda ent_dy,x
-    beq .sc_done
+    beq .sc_try
     bmi .sc_up
-    lda ent_y,x
+    lda step_ny
     cmp #24
-    bcs .sc_done
-    inc ent_y,x
-    jmp .sc_done
+    bcs .sc_try
+    inc step_ny
+    jmp .sc_try
 .sc_up:
-    lda ent_y,x
+    lda step_ny
     cmp #1
-    beq .sc_done
-    dec ent_y,x
+    beq .sc_try
+    dec step_ny
+.sc_try:
+    lda step_nx                 ; 1st choice: the full move
+    sta step_cx
+    lda step_ny
+    sta step_cy
+    jsr step_commit_if_free
+    bcs .sc_done
+    lda step_nx                 ; blocked: slide along x only
+    sta step_cx
+    lda ent_y,x
+    sta step_cy
+    jsr step_commit_if_free
+    bcs .sc_done
+    lda ent_x,x                 ; still blocked: slide along y only
+    sta step_cx
+    lda step_ny
+    sta step_cy
+    jsr step_commit_if_free
 .sc_done:
+    rts
+
+; Move entity X to (step_cx, step_cy) if that is a different cell and nothing
+; occupies it, updating the occupancy grid. Returns C set if it moved.
+; Preserves X. Clobbers A, Y.
+step_commit_if_free:
+    lda step_cx
+    cmp ent_x,x
+    bne .scf_check
+    lda step_cy
+    cmp ent_y,x
+    beq .scf_no                 ; same cell it's already on: not a move
+.scf_check:
+    ldy step_cy
+    lda grid_row_lo,y
+    sta GRID_PTR
+    lda grid_row_hi,y
+    sta GRID_PTR + 1
+    ldy step_cx
+    iny
+    lda (GRID_PTR),y
+    bne .scf_no                 ; occupied
+    jsr grid_clear              ; leave the old cell...
+    lda step_cx
+    sta ent_x,x
+    lda step_cy
+    sta ent_y,x
+    jsr grid_set                ; ...and take the new one
+    sec
+    rts
+.scf_no:
+    clc
     rts

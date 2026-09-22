@@ -106,6 +106,7 @@ update_game:
 !src "src/enemy_ai.asm"
 !src "src/projectiles.asm"
 !src "src/collision.asm"
+!src "src/grid.asm"
 !src "src/renderer.asm"
 !src "src/hud.asm"
 !src "src/game_state.asm"

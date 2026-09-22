@@ -25,6 +25,7 @@ init_entities:
     sta ent_active,x
     dex
     bpl .ie_loop
+    jsr grid_init
     rts
 
 ; Spawn one entity described by sp_type / sp_x / sp_y.
@@ -61,6 +62,7 @@ spawn_entity:
     sta ent_hp,x
     lda typ_speed,y
     sta ent_speed,x
+    jsr grid_set
     rts
 
 ; Type-mix tiers, tougher as wave_number climbs (see select_wave_tier).
@@ -106,7 +108,8 @@ spawn_pos_too_close:
 ; select_wave_tier / WAVE_TYPES_PTR) at a random interior position (column
 ; 4..35, row 4..19), rerolling the position (up to SPAWN_MAX_TRIES times) if
 ; it lands too close to the player -- so a spawn reads as "appeared elsewhere
-; and is approaching," not a point-blank ambush.
+; and is approaching," not a point-blank ambush. Also rerolls occupied cells,
+; and gives up on the spawn if it can't find a free one.
 ; Does nothing if the pool is full (spawn_entity's own limit).
 ; Clobbers A, X, Y.
 spawn_random_entity:
@@ -116,7 +119,7 @@ spawn_random_entity:
     lda (WAVE_TYPES_PTR),y
     sta sp_type
 
-    ldy #SPAWN_MAX_TRIES
+    ldx #SPAWN_MAX_TRIES        ; X, not Y: grid_occupied_at_sp clobbers Y
 .sre_retry:
     lda RANDOM
     and #$1f
@@ -130,11 +133,19 @@ spawn_random_entity:
     sta sp_y                ; row 4..19
 
     jsr spawn_pos_too_close
-    beq .sre_use             ; far enough from the player: use it
-    dey
-    bne .sre_retry           ; out of tries: fall through and use it anyway
+    bne .sre_reroll          ; too close to the player
+    jsr grid_occupied_at_sp
+    beq .sre_use             ; free and far enough from the player: use it
+.sre_reroll:
+    dex
+    bne .sre_retry
+    ; Out of tries. Too close to the player is tolerable, but an occupied
+    ; cell is not -- enemies never share a cell -- so skip this spawn.
+    jsr grid_occupied_at_sp
+    bne .sre_skip
 .sre_use:
     jsr spawn_entity
+.sre_skip:
     rts
 
 ; --- Discrete waves: a wave bursts its whole population at once, gets
