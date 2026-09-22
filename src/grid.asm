@@ -88,3 +88,50 @@ grid_occupied_at_sp:
     iny
     lda (GRID_PTR),y
     rts
+
+; grid_find_near parameters.
+gf_x: !byte 0
+gf_y: !byte 0
+gfn_col0: !byte 0
+
+; Row/column offsets for the nine cells of a 3x3 box, in lockstep -- this
+; mirrors collision.asm's SHOT_HIT_RADIUS = 1 (a shot's forgiving hitbox),
+; just as a spatial-index lookup instead of a scan over every enemy.
+gf_dy9: !byte $ff,$ff,$ff,   0,  0,  0,   1,  1,  1
+gf_dx9: !byte $ff,  0,  1, $ff,  0,  1, $ff,  0,  1
+
+; Search the 3x3 box centered on (gf_x, gf_y) for an occupied cell. Returns,
+; on a hit, A = occupant's enemy slot (0-based) with carry set; with carry
+; clear if the whole box is empty (A undefined). Any occupant in the box is
+; an equally valid result -- there's no nearest-first ordering.
+; Clobbers A, X, Y.
+grid_find_near:
+    lda gf_x
+    clc
+    adc #1
+    sta gfn_col0             ; center column, border-offset
+    ldx #0
+.gfn_loop:
+    lda gf_y
+    clc
+    adc gf_dy9,x
+    tay
+    lda grid_row_lo,y
+    sta GRID_PTR
+    lda grid_row_hi,y
+    sta GRID_PTR + 1
+    lda gfn_col0
+    clc
+    adc gf_dx9,x
+    tay
+    lda (GRID_PTR),y
+    beq .gfn_next
+    sec
+    sbc #1                   ; A = occupant slot (0-based); C stays set
+    rts
+.gfn_next:
+    inx
+    cpx #9
+    bne .gfn_loop
+    clc                      ; empty box
+    rts

@@ -117,25 +117,25 @@ update_projectiles:
     bne .up_loop
     rts
 
-; Scan the enemy pool for one within SHOT_HIT_RADIUS of shot X's cell. On a
-; hit: kill the enemy (hit_enemy) and despawn the shot. Enter with X = shot
-; slot. Preserves X. Clobbers A, Y.
+; Look up the occupancy grid for an enemy within SHOT_HIT_RADIUS of shot X's
+; cell (see grid_find_near). On a hit: kill the enemy (hit_enemy) and despawn
+; the shot. Enter with X = shot slot. Preserves X. Clobbers A, X, Y.
 shot_hitscan:
-    ldy #0
-.shs_loop:
-    lda ent_active,y
-    beq .shs_next
-    lda ent_x,y
-    sta hit_test_x
-    lda ent_y,y
-    sta hit_test_y
-    jsr shot_near_target
-    beq .shs_next
+    lda sh_x,x
+    sta gf_x
+    lda sh_y,x
+    sta gf_y
+    txa
+    pha                      ; save shot slot -- grid_find_near clobbers X
+    jsr grid_find_near
+    bcc .shs_miss
+    tay                      ; Y = enemy slot
+    pla
+    tax                      ; restore shot slot
     jsr hit_enemy            ; Y = enemy slot; preserves X
     jsr despawn_shot         ; X = shot slot
     rts
-.shs_next:
-    iny
-    cpy #MAX_ENT
-    bne .shs_loop
+.shs_miss:
+    pla
+    tax                      ; restore shot slot
     rts

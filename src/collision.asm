@@ -1,6 +1,9 @@
-; --- Collision: brute-force cell comparison, no spatial index yet.
+; --- Collision: check_player_hit and shot_hitscan (projectiles.asm) both
+;     query grid.asm's occupancy grid instead of scanning the enemy pool.
 ;     hit_enemy is called from projectiles.asm; check_player_hit runs once per
-;     frame from game_tick. The occupancy grid is a later milestone. ---
+;     frame from game_tick. shot_near_target stays a direct O(1) check --
+;     it's shot-vs-player (projectiles.asm), and the player isn't in the
+;     grid. ---
 
 ; Shots only travel in the 8 fixed directions, so landing an exact-cell hit
 ; against a moving target is hard even when aimed well. shot_near_target
@@ -66,27 +69,26 @@ hit_enemy:
     rts
 
 ; Enemy-vs-player contact. Counts i-frames down and, while invulnerable, skips
-; the scan entirely. On contact: jsr player_hit. Clobbers A, X.
+; the check entirely. Otherwise a single occupancy-grid lookup at the
+; player's own cell replaces what used to be a scan over every enemy -- the
+; player isn't in the grid, so this can't see itself, and contact is exact
+; (no SHOT_HIT_RADIUS tolerance; that's "did you walk into it," not "did your
+; shot's line pass close enough"). On contact: jsr player_hit. Clobbers A, Y.
 check_player_hit:
     lda player_iframes
-    beq .cph_scan
+    beq .cph_check
     dec player_iframes
     rts
-.cph_scan:
-    ldx #0
-.cph_loop:
-    lda ent_active,x
-    beq .cph_next
-    lda ent_x,x
-    cmp player_x
-    bne .cph_next
-    lda ent_y,x
-    cmp player_y
-    bne .cph_next
+.cph_check:
+    ldy player_y
+    lda grid_row_lo,y
+    sta GRID_PTR
+    lda grid_row_hi,y
+    sta GRID_PTR + 1
+    ldy player_x
+    iny
+    lda (GRID_PTR),y
+    beq .cph_done
     jsr player_hit
-    rts                        ; one contact per frame is enough
-.cph_next:
-    inx
-    cpx #MAX_ENT
-    bne .cph_loop
+.cph_done:
     rts
